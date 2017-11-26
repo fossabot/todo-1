@@ -15,6 +15,7 @@ type Todo struct {
 type Service interface {
 	CreateTodo(todo Todo) (int64, error)
 	GetTodo(id int64) (Todo, error)
+	GetTodos() ([]Todo, error)
 	UpdateTodo(todo Todo) error
 	DeleteTodo(id int64) error
 }

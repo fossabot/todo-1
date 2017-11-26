@@ -101,6 +101,43 @@ func TestGetTodo(t *testing.T) {
 	}
 }
 
+func roughTodoEquality(t1 gstore.Todo, t2 gstore.Todo) bool {
+	return t1.Description == t2.Description && t1.CreatedAt == t2.CreatedAt && t1.CompletedAt == t2.CompletedAt
+}
+
+func TestGetTodos(t *testing.T) {
+	_, err := rawDB.Exec("DELETE FROM todos")
+	if err != nil {
+		t.Errorf("clearing todos table: %v\n", err)
+		t.FailNow()
+	}
+
+	for _, tt := range todoCases {
+		todo := tt.initialTodo
+
+		_, err := rawDB.Exec(
+			"INSERT INTO todos (description, createdAt, completedAt) VALUES ($1, $2, $3)",
+			todo.Description, todo.CreatedAt, todo.CompletedAt)
+		assert.Nil(t, err)
+	}
+
+	todos, err := globalStore.GetTodos()
+	assert.Nil(t, err)
+
+	for _, tt := range todoCases {
+		expectedTodo := tt.initialTodo
+		found := false
+
+		for _, todo := range todos {
+			if roughTodoEquality(expectedTodo, todo) {
+				found = true
+			}
+		}
+
+		assert.True(t, found)
+	}
+}
+
 func TestUpdateTodo(t *testing.T) {
 	_, err := rawDB.Exec("DELETE FROM todos")
 	if err != nil {

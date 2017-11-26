@@ -65,6 +65,26 @@ func (s *store) GetTodo(id int64) (gstore.Todo, error) {
 	return todo, err
 }
 
+func (s *store) GetTodos() ([]gstore.Todo, error) {
+	rows, err := s.db.Query("SELECT description, createdAt, completedAt FROM todos")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	todos := []gstore.Todo{}
+
+	for rows.Next() {
+		var todo gstore.Todo
+		if err := rows.Scan(&todo.Description, &todo.CreatedAt, &todo.CompletedAt); err != nil {
+			return nil, err
+		}
+		todos = append(todos, todo)
+	}
+
+	return todos, nil
+}
+
 func (s *store) UpdateTodo(todo gstore.Todo) error {
 	_, err := s.db.Exec("UPDATE todos SET description = $1, createdAt = $2, completedAt = $3 WHERE id = $4",
 		todo.Description, todo.CreatedAt, todo.CompletedAt, todo.ID)
