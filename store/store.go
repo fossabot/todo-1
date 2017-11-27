@@ -28,7 +28,7 @@ type Service interface {
 	Close() error
 }
 
-func Populate(nt NullableTodo, t Todo) Todo {
+func Populate(t Todo, nt NullableTodo) Todo {
 	if nt.ID != nil {
 		t.ID = *nt.ID
 	}

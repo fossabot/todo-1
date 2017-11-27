@@ -138,7 +138,7 @@ func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedTodo := store.Populate(todo, existingTodo)
+	updatedTodo := store.Populate(existingTodo, todo)
 
 	updatedTodo.ID = id
 
