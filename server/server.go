@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/fharding1/todo/store"
 	"github.com/gorilla/mux"
@@ -49,7 +50,28 @@ func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int64{"id": id})
 }
 
-func (s *Server) getTodo(w http.ResponseWriter, r *http.Request)    {}
+func (s *Server) getTodo(w http.ResponseWriter, r *http.Request) {
+	rawID := mux.Vars(r)["id"]
+
+	id, err := strconv.ParseInt(rawID, 10, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	todo, err := s.sto.GetTodo(id)
+	if err != nil {
+		if err == store.ErrNoResults {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(todo)
+}
+
 func (s *Server) getTodos(w http.ResponseWriter, r *http.Request)   {}
 func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {}
