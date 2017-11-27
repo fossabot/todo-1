@@ -86,7 +86,19 @@ func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(todos)
 }
 
-func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {
+	var todo store.Todo
+	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.sto.UpdateTodo(todo); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {}
 
 func limitBody(next http.Handler) http.Handler {
