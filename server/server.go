@@ -23,7 +23,8 @@ func New(sto store.Service) *Server {
 	router.HandleFunc("/todo", s.createTodo).Methods("POST")
 	router.HandleFunc("/todo", s.getTodos).Methods("GET")
 	router.HandleFunc("/todo/{id}", s.getTodo).Methods("GET")
-	router.HandleFunc("/todo/{id}", s.updateTodo).Methods("PUT")
+	router.HandleFunc("/todo/{id}", s.putTodo).Methods("PUT")
+	router.HandleFunc("/todo/{id}", s.patchTodo).Methods("PATCH")
 	router.HandleFunc("/todo/{id}", s.deleteTodo).Methods("DELETE")
 
 	s.handler = limitBody(router)
@@ -89,7 +90,7 @@ func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(todos)
 }
 
-func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {
+func (s *Server) putTodo(w http.ResponseWriter, r *http.Request) {
 	rawID := mux.Vars(r)["id"]
 
 	id, err := strconv.ParseInt(rawID, 10, 64)
@@ -110,6 +111,42 @@ func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
+	rawID := mux.Vars(r)["id"]
+
+	id, err := strconv.ParseInt(rawID, 10, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	var todo store.NullableTodo
+	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	existingTodo, err := s.sto.GetTodo(id)
+	if err != nil {
+		if err == store.ErrNoResults {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	updatedTodo := store.Populate(todo, existingTodo)
+
+	updatedTodo.ID = id
+
+	if err := s.sto.UpdateTodo(updatedTodo); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {
