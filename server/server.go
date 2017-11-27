@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/fharding1/todo/store"
 	"github.com/gorilla/mux"
@@ -41,6 +42,8 @@ func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+
+	todo.CreatedAt = time.Now().Unix()
 
 	id, err := s.sto.CreateTodo(todo)
 	if err != nil {
