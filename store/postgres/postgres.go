@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	gstore "github.com/fharding1/todo/store"
+
+	// for the postgres sql driver
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 )
@@ -13,6 +15,7 @@ type store struct {
 	db *sql.DB
 }
 
+// Options holds information for connecting to a postgresql server
 type Options struct {
 	User, Pass string
 	Host       string
@@ -34,6 +37,7 @@ CREATE TABLE IF NOT EXISTS todos (
 	completedAt bigint
 )`
 
+// New connects to a postgres server with specified options and returns a store.Service
 func New(options Options) (gstore.Service, error) {
 	db, err := sql.Open("postgres", options.connectionInfo())
 	if err != nil {

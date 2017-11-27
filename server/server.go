@@ -10,11 +10,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Server holds information neccesary for a Todo server, such as the store
+// and the http handler
 type Server struct {
 	sto     store.Service
 	handler http.Handler
 }
 
+// New creates a new Server from a store and populates the handler
 func New(sto store.Service) *Server {
 	router := mux.NewRouter()
 
@@ -32,6 +35,7 @@ func New(sto store.Service) *Server {
 	return s
 }
 
+// Run starts the server listening on what address is specified
 func (s *Server) Run(addr string) error {
 	return http.ListenAndServe(addr, s.handler)
 }
