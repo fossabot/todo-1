@@ -95,3 +95,7 @@ func (s *store) DeleteTodo(id int64) error {
 	_, err := s.db.Exec("DELETE FROM todos WHERE id = $1", id)
 	return err
 }
+
+func (s *store) Close() error {
+	return s.db.Close()
+}

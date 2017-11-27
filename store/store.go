@@ -18,4 +18,5 @@ type Service interface {
 	GetTodos() ([]Todo, error)
 	UpdateTodo(todo Todo) error
 	DeleteTodo(id int64) error
+	Close() error
 }
