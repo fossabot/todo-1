@@ -66,7 +66,7 @@ func (s *store) GetTodo(id int64) (gstore.Todo, error) {
 }
 
 func (s *store) GetTodos() ([]gstore.Todo, error) {
-	rows, err := s.db.Query("SELECT description, createdAt, completedAt FROM todos")
+	rows, err := s.db.Query("SELECT id, description, createdAt, completedAt FROM todos")
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *store) GetTodos() ([]gstore.Todo, error) {
 
 	for rows.Next() {
 		var todo gstore.Todo
-		if err := rows.Scan(&todo.Description, &todo.CreatedAt, &todo.CompletedAt); err != nil {
+		if err := rows.Scan(&todo.ID, &todo.Description, &todo.CreatedAt, &todo.CompletedAt); err != nil {
 			return nil, err
 		}
 		todos = append(todos, todo)

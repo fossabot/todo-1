@@ -63,16 +63,29 @@ func (s *Server) getTodo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == store.ErrNoResults {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	json.NewEncoder(w).Encode(todo)
 }
 
-func (s *Server) getTodos(w http.ResponseWriter, r *http.Request)   {}
+func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
+	todos, err := s.sto.GetTodos()
+	if err != nil {
+		if err == store.ErrNoResults {
+			todos = []store.Todo{}
+		} else {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	json.NewEncoder(w).Encode(todos)
+}
+
 func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {}
 func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {}
 
