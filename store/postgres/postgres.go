@@ -4,14 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 
-	gstore "github.com/fharding1/todo/store"
+	"github.com/fharding1/todo/store"
 
 	// for the postgres sql driver
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 )
 
-type store struct {
+type service struct {
 	db *sql.DB
 }
 
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS todos (
 )`
 
 // New connects to a postgres server with specified options and returns a store.Service
-func New(options Options) (gstore.Service, error) {
+func New(options Options) (store.Service, error) {
 	db, err := sql.Open("postgres", options.connectionInfo())
 	if err != nil {
 		return nil, errors.Wrap(err, "connecting to postgres database")
@@ -49,37 +49,37 @@ func New(options Options) (gstore.Service, error) {
 		return nil, errors.Wrap(err, "creating todos table")
 	}
 
-	return &store{db: db}, nil
+	return &service{db: db}, nil
 }
 
-func (s *store) CreateTodo(todo gstore.Todo) (id int64, err error) {
+func (s *service) CreateTodo(todo store.Todo) (id int64, err error) {
 	err = s.db.QueryRow(
 		"INSERT INTO todos (description, createdAt, completedAt) VALUES ($1, $2, $3) RETURNING id",
 		todo.Description, todo.CreatedAt, todo.CompletedAt).Scan(&id)
 	return
 }
 
-func (s *store) GetTodo(id int64) (gstore.Todo, error) {
-	todo := gstore.Todo{ID: id}
+func (s *service) GetTodo(id int64) (store.Todo, error) {
+	todo := store.Todo{ID: id}
 	err := s.db.QueryRow("SELECT description, createdAt, completedAt FROM todos WHERE id = $1", id).Scan(
 		&todo.Description, &todo.CreatedAt, &todo.CompletedAt)
 	if err == sql.ErrNoRows {
-		err = gstore.ErrNoResults
+		err = store.ErrNoResults
 	}
 	return todo, err
 }
 
-func (s *store) GetTodos() ([]gstore.Todo, error) {
+func (s *service) GetTodos() ([]store.Todo, error) {
 	rows, err := s.db.Query("SELECT id, description, createdAt, completedAt FROM todos")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	todos := []gstore.Todo{}
+	todos := []store.Todo{}
 
 	for rows.Next() {
-		var todo gstore.Todo
+		var todo store.Todo
 		if err := rows.Scan(&todo.ID, &todo.Description, &todo.CreatedAt, &todo.CompletedAt); err != nil {
 			return nil, err
 		}
@@ -89,13 +89,13 @@ func (s *store) GetTodos() ([]gstore.Todo, error) {
 	return todos, nil
 }
 
-func (s *store) UpdateTodo(todo gstore.Todo) error {
+func (s *service) UpdateTodo(todo store.Todo) error {
 	_, err := s.db.Exec("UPDATE todos SET description = $1, createdAt = $2, completedAt = $3 WHERE id = $4",
 		todo.Description, todo.CreatedAt, todo.CompletedAt, todo.ID)
 	return err
 }
 
-func (s *store) PatchTodo(nt gstore.NullableTodo) error {
+func (s *service) PatchTodo(nt store.NullableTodo) error {
 	_, err := s.db.Exec(`
 		UPDATE todos SET
 		description = COALESCE($1, description),
@@ -106,11 +106,11 @@ func (s *store) PatchTodo(nt gstore.NullableTodo) error {
 	return err
 }
 
-func (s *store) DeleteTodo(id int64) error {
+func (s *service) DeleteTodo(id int64) error {
 	_, err := s.db.Exec("DELETE FROM todos WHERE id = $1", id)
 	return err
 }
 
-func (s *store) Close() error {
+func (s *service) Close() error {
 	return s.db.Close()
 }
