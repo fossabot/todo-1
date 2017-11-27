@@ -13,13 +13,12 @@ import (
 type Server struct {
 	sto     store.Service
 	handler http.Handler
-	addr    string
 }
 
-func New(sto store.Service, addr string) *Server {
+func New(sto store.Service) *Server {
 	router := mux.NewRouter()
 
-	s := &Server{sto: sto, addr: addr}
+	s := &Server{sto: sto}
 
 	router.HandleFunc("/todo", s.createTodo).Methods("POST")
 	router.HandleFunc("/todo/{id}", s.getTodo).Methods("GET")
@@ -32,8 +31,8 @@ func New(sto store.Service, addr string) *Server {
 	return s
 }
 
-func (s *Server) Run() error {
-	return http.ListenAndServe(s.addr, s.handler)
+func (s *Server) Run(addr string) error {
+	return http.ListenAndServe(addr, s.handler)
 }
 
 func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {

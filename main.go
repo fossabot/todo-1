@@ -29,11 +29,11 @@ func main() {
 		log.Fatalf("connecting to postgres database: %v\n", err)
 	}
 
+	s := server.New(sto)
+
 	addr := os.Getenv("TODO_ADDR")
 
-	s := server.New(sto, addr)
-
-	if err := s.Run(); err != nil {
+	if err := s.Run(addr); err != nil {
 		log.Fatalf("running server: %v\n", err)
 	}
 
