@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Server holds information neccesary for a Todo server, such as the store
+// Server holds information necessary for a Todo server, such as the store
 // and the http handler
 type Server struct {
 	sto     store.Service
