@@ -21,9 +21,9 @@ func New(sto store.Service) *Server {
 	s := &Server{sto: sto}
 
 	router.HandleFunc("/todo", s.createTodo).Methods("POST")
-	router.HandleFunc("/todo/{id}", s.getTodo).Methods("GET")
 	router.HandleFunc("/todo", s.getTodos).Methods("GET")
-	router.HandleFunc("/todo", s.updateTodo).Methods("PUT")
+	router.HandleFunc("/todo/{id}", s.getTodo).Methods("GET")
+	router.HandleFunc("/todo/{id}", s.updateTodo).Methods("PUT")
 	router.HandleFunc("/todo/{id}", s.deleteTodo).Methods("DELETE")
 
 	s.handler = limitBody(router)
@@ -90,11 +90,21 @@ func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {
+	rawID := mux.Vars(r)["id"]
+
+	id, err := strconv.ParseInt(rawID, 10, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
 	var todo store.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
+
+	todo.ID = id
 
 	if err := s.sto.UpdateTodo(todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
