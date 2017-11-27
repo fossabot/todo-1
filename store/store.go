@@ -31,22 +31,3 @@ type Service interface {
 	DeleteTodo(id int64) error
 	Close() error
 }
-
-// Populate populates an existing Todo with the not null fields of a NullableTodo, and
-// returns the updated Todo
-func Populate(t Todo, nt NullableTodo) Todo {
-	if nt.ID != nil {
-		t.ID = *nt.ID
-	}
-	if nt.Description != nil {
-		t.Description = *nt.Description
-	}
-	if nt.CreatedAt != nil {
-		t.CreatedAt = *nt.CreatedAt
-	}
-	if nt.CompletedAt != nil {
-		t.CompletedAt = nt.CompletedAt
-	}
-
-	return t
-}
