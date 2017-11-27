@@ -27,6 +27,7 @@ type Service interface {
 	GetTodo(id int64) (Todo, error)
 	GetTodos() ([]Todo, error)
 	UpdateTodo(todo Todo) error
+	PatchTodo(nt NullableTodo) error
 	DeleteTodo(id int64) error
 	Close() error
 }

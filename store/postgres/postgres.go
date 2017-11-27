@@ -95,6 +95,17 @@ func (s *store) UpdateTodo(todo gstore.Todo) error {
 	return err
 }
 
+func (s *store) PatchTodo(nt gstore.NullableTodo) error {
+	_, err := s.db.Exec(`
+		UPDATE todos SET
+		description = COALESCE($1, description),
+		createdAt = COALESCE($2, createdAt),
+		completedAt = COALESCE($3, completedAt)
+		WHERE id = $4
+		`, nt.Description, nt.CreatedAt, nt.CompletedAt, nt.ID)
+	return err
+}
+
 func (s *store) DeleteTodo(id int64) error {
 	_, err := s.db.Exec("DELETE FROM todos WHERE id = $1", id)
 	return err

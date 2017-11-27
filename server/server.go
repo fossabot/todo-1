@@ -132,25 +132,12 @@ func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existingTodo, err := s.sto.GetTodo(id)
-	if err != nil {
-		if err == store.ErrNoResults {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		} else {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-		return
-	}
+	todo.ID = &id
 
-	updatedTodo := store.Populate(existingTodo, todo)
-
-	updatedTodo.ID = id
-
-	if err := s.sto.UpdateTodo(updatedTodo); err != nil {
+	if err := s.sto.PatchTodo(todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-
 }
 
 func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {
