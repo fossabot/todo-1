@@ -99,7 +99,20 @@ func (s *Server) updateTodo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {}
+func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {
+	rawID := mux.Vars(r)["id"]
+
+	id, err := strconv.ParseInt(rawID, 10, 64)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	if err := s.sto.DeleteTodo(id); err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+}
 
 func limitBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
