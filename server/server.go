@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fharding1/todo/store"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -23,12 +24,17 @@ func New(sto store.Service) *Server {
 
 	s := &Server{sto: sto}
 
-	router.HandleFunc("/todo", s.createTodo).Methods("POST")
-	router.HandleFunc("/todo", s.getTodos).Methods("GET")
-	router.HandleFunc("/todo/{id}", s.getTodo).Methods("GET")
-	router.HandleFunc("/todo/{id}", s.putTodo).Methods("PUT")
-	router.HandleFunc("/todo/{id}", s.patchTodo).Methods("PATCH")
-	router.HandleFunc("/todo/{id}", s.deleteTodo).Methods("DELETE")
+	router.Handle("/todo", handlers.MethodHandler{
+		"GET":  http.HandlerFunc(s.getTodos),
+		"POST": http.HandlerFunc(s.createTodo),
+	})
+
+	router.Handle("/todo/{id}", handlers.MethodHandler{
+		"GET":    http.HandlerFunc(s.getTodo),
+		"PUT":    http.HandlerFunc(s.putTodo),
+		"PATCH":  http.HandlerFunc(s.patchTodo),
+		"DELETE": http.HandlerFunc(s.deleteTodo),
+	})
 
 	s.handler = defaultHeaders(router)
 	s.handler = limitBody(s.handler)
