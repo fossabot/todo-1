@@ -11,18 +11,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Server holds information necessary for a Todo server, such as the store
+// server holds information necessary for a Todo server, such as the store
 // and the http handler
-type Server struct {
+type server struct {
 	sto     store.Service
 	handler http.Handler
 }
 
 // New creates a new Server from a store and populates the handler
-func New(sto store.Service) *Server {
+func New(sto store.Service) *server {
 	router := mux.NewRouter()
 
-	s := &Server{sto: sto}
+	s := &server{sto: sto}
 
 	router.Handle("/todo", handlers.MethodHandler{
 		"GET":  http.HandlerFunc(s.getTodos),
@@ -43,11 +43,11 @@ func New(sto store.Service) *Server {
 }
 
 // Run starts the server listening on what address is specified
-func (s *Server) Run(addr string) error {
+func (s *server) Run(addr string) error {
 	return http.ListenAndServe(addr, s.handler)
 }
 
-func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {
+func (s *server) createTodo(w http.ResponseWriter, r *http.Request) {
 	var todo store.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -65,7 +65,7 @@ func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]int64{"id": id})
 }
 
-func (s *Server) getTodo(w http.ResponseWriter, r *http.Request) {
+func (s *server) getTodo(w http.ResponseWriter, r *http.Request) {
 	rawID := mux.Vars(r)["id"]
 
 	id, err := strconv.ParseInt(rawID, 10, 64)
@@ -87,7 +87,7 @@ func (s *Server) getTodo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(todo)
 }
 
-func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
+func (s *server) getTodos(w http.ResponseWriter, r *http.Request) {
 	todos, err := s.sto.GetTodos()
 	if err != nil {
 		if err == store.ErrNoResults {
@@ -101,7 +101,7 @@ func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(todos)
 }
 
-func (s *Server) putTodo(w http.ResponseWriter, r *http.Request) {
+func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
 	rawID := mux.Vars(r)["id"]
 
 	id, err := strconv.ParseInt(rawID, 10, 64)
@@ -124,7 +124,7 @@ func (s *Server) putTodo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
+func (s *server) patchTodo(w http.ResponseWriter, r *http.Request) {
 	rawID := mux.Vars(r)["id"]
 
 	id, err := strconv.ParseInt(rawID, 10, 64)
@@ -147,7 +147,7 @@ func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {
+func (s *server) deleteTodo(w http.ResponseWriter, r *http.Request) {
 	rawID := mux.Vars(r)["id"]
 
 	id, err := strconv.ParseInt(rawID, 10, 64)
