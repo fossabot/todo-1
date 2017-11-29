@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fharding1/todo/store"
+	"github.com/fharding1/todo/internal/store"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )

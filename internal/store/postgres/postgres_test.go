@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fharding1/todo/store"
+	"github.com/fharding1/todo/internal/store"
 	"github.com/stretchr/testify/assert"
 )
 

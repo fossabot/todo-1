@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/fharding1/todo/store"
+	"github.com/fharding1/todo/internal/store"
 
 	// for the postgres sql driver
 	_ "github.com/lib/pq"
