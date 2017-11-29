@@ -30,7 +30,8 @@ func New(sto store.Service) *Server {
 	router.HandleFunc("/todo/{id}", s.patchTodo).Methods("PATCH")
 	router.HandleFunc("/todo/{id}", s.deleteTodo).Methods("DELETE")
 
-	s.handler = limitBody(router)
+	s.handler = defaultHeaders(router)
+	s.handler = limitBody(s.handler)
 
 	return s
 }
