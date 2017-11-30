@@ -74,6 +74,7 @@ func (s *service) GetTodos() ([]store.Todo, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	todos := []store.Todo{}
 
