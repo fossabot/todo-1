@@ -74,7 +74,6 @@ func (s *service) GetTodos() ([]store.Todo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	todos := []store.Todo{}
 
@@ -84,6 +83,10 @@ func (s *service) GetTodos() ([]store.Todo, error) {
 			return nil, err
 		}
 		todos = append(todos, todo)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return todos, nil
