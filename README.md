@@ -4,6 +4,6 @@ A clean todo web backend written in Go.
 
 ## Testing
 
-```golang
+```bash
 sudo scripts/test.sh compose-testing.yml
 ```
