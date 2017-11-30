@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fharding1/todo/internal/respond"
 	"github.com/fharding1/todo/internal/store"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -58,11 +59,11 @@ func (s *server) createTodo(w http.ResponseWriter, r *http.Request) {
 
 	id, err := s.sto.CreateTodo(todo)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		respond.JSON(w, err)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]int64{"id": id})
+	respond.JSON(w, map[string]int64{"id": id})
 }
 
 func (s *server) getTodo(w http.ResponseWriter, r *http.Request) {
@@ -79,12 +80,12 @@ func (s *server) getTodo(w http.ResponseWriter, r *http.Request) {
 		if err == store.ErrNoResults {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		} else {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			respond.JSON(w, err)
 		}
 		return
 	}
 
-	json.NewEncoder(w).Encode(todo)
+	respond.JSON(w, todo)
 }
 
 func (s *server) getTodos(w http.ResponseWriter, r *http.Request) {
@@ -93,12 +94,12 @@ func (s *server) getTodos(w http.ResponseWriter, r *http.Request) {
 		if err == store.ErrNoResults {
 			todos = []store.Todo{}
 		} else {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			respond.JSON(w, err)
 			return
 		}
 	}
 
-	json.NewEncoder(w).Encode(todos)
+	respond.JSON(w, todos)
 }
 
 func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +120,7 @@ func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
 	todo.ID = id
 
 	if err := s.sto.UpdateTodo(todo); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		respond.JSON(w, err)
 		return
 	}
 }
@@ -142,7 +143,7 @@ func (s *server) patchTodo(w http.ResponseWriter, r *http.Request) {
 	todo.ID = &id
 
 	if err := s.sto.PatchTodo(todo); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		respond.JSON(w, err)
 		return
 	}
 }
@@ -157,7 +158,7 @@ func (s *server) deleteTodo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.sto.DeleteTodo(id); err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		respond.JSON(w, err)
 		return
 	}
 }
