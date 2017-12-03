@@ -12,18 +12,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// server holds information necessary for a Todo server, such as the store
-// and the http handler
 type server struct {
 	sto     store.Service
 	handler http.Handler
 }
 
-// New creates a new Server from a store and populates the handler
+// New creates a new server from a store and populates the handler
 func New(sto store.Service) *server {
-	router := mux.NewRouter()
-
 	s := &server{sto: sto}
+
+	router := mux.NewRouter()
 
 	router.Handle("/todo", handlers.MethodHandler{
 		"GET":  http.HandlerFunc(s.getTodos),
@@ -37,8 +35,7 @@ func New(sto store.Service) *server {
 		"DELETE": http.HandlerFunc(s.deleteTodo),
 	})
 
-	s.handler = defaultHeaders(router)
-	s.handler = limitBody(s.handler)
+	s.handler = limitBody(defaultHeaders(router))
 
 	return s
 }
