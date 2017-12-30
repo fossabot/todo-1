@@ -33,8 +33,7 @@ const todoTableCreationQuery = `
 CREATE TABLE IF NOT EXISTS todos (
 	id          SERIAL PRIMARY KEY,
 	description varchar(256),
-	createdAt   bigint,
-	completedAt bigint
+	isCompleted BOOLEAN
 )`
 
 // New connects to a postgres server with specified options and returns a store.Service
@@ -54,15 +53,15 @@ func New(options Options) (store.Service, error) {
 
 func (s *service) CreateTodo(todo store.Todo) (id int64, err error) {
 	err = s.db.QueryRow(
-		"INSERT INTO todos (description, createdAt, completedAt) VALUES ($1, $2, $3) RETURNING id",
-		todo.Description, todo.CreatedAt, todo.CompletedAt).Scan(&id)
+		"INSERT INTO todos (description, isCompleted) VALUES ($1, $2) RETURNING id",
+		todo.Description, todo.IsCompleted).Scan(&id)
 	return
 }
 
 func (s *service) GetTodo(id int64) (store.Todo, error) {
 	todo := store.Todo{ID: id}
-	err := s.db.QueryRow("SELECT description, createdAt, completedAt FROM todos WHERE id = $1", id).Scan(
-		&todo.Description, &todo.CreatedAt, &todo.CompletedAt)
+	err := s.db.QueryRow("SELECT description, isCompleted FROM todos WHERE id = $1", id).Scan(
+		&todo.Description, &todo.IsCompleted)
 	if err == sql.ErrNoRows {
 		err = store.ErrNoResults
 	}
@@ -70,7 +69,7 @@ func (s *service) GetTodo(id int64) (store.Todo, error) {
 }
 
 func (s *service) GetTodos() ([]store.Todo, error) {
-	rows, err := s.db.Query("SELECT id, description, createdAt, completedAt FROM todos")
+	rows, err := s.db.Query("SELECT id, description, isCompleted FROM todos")
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +79,7 @@ func (s *service) GetTodos() ([]store.Todo, error) {
 
 	for rows.Next() {
 		var todo store.Todo
-		if err := rows.Scan(&todo.ID, &todo.Description, &todo.CreatedAt, &todo.CompletedAt); err != nil {
+		if err := rows.Scan(&todo.ID, &todo.Description, &todo.IsCompleted); err != nil {
 			return nil, err
 		}
 		todos = append(todos, todo)
@@ -94,8 +93,8 @@ func (s *service) GetTodos() ([]store.Todo, error) {
 }
 
 func (s *service) UpdateTodo(todo store.Todo) error {
-	_, err := s.db.Exec("UPDATE todos SET description = $1, createdAt = $2, completedAt = $3 WHERE id = $4",
-		todo.Description, todo.CreatedAt, todo.CompletedAt, todo.ID)
+	_, err := s.db.Exec("UPDATE todos SET description = $1, completedAt = $2 WHERE id = $3",
+		todo.Description, todo.IsCompleted, todo.ID)
 	return err
 }
 
@@ -103,10 +102,9 @@ func (s *service) PatchTodo(nt store.NullableTodo) error {
 	_, err := s.db.Exec(`
 		UPDATE todos SET
 		description = COALESCE($1, description),
-		createdAt = COALESCE($2, createdAt),
-		completedAt = COALESCE($3, completedAt)
-		WHERE id = $4
-		`, nt.Description, nt.CreatedAt, nt.CompletedAt, nt.ID)
+		isCompleted = COALESCE($2, isCompleted)
+		WHERE id = $3
+		`, nt.Description, nt.IsCompleted, nt.ID)
 	return err
 }
 

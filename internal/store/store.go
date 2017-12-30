@@ -9,16 +9,14 @@ var ErrNoResults = fmt.Errorf("no results returned")
 type Todo struct {
 	ID          int64  `json:"id"`
 	Description string `json:"description"`
-	CreatedAt   int64  `json:"createdAt"`
-	CompletedAt *int64 `json:"completedAt,omitempty"` // nullable
+	IsCompleted bool   `json:"isCompleted"`
 }
 
 // NullableTodo is a Todo with all nullable fields
 type NullableTodo struct {
 	ID          *int64  `json:"id"`
 	Description *string `json:"description"`
-	CreatedAt   *int64  `json:"createdAt"`
-	CompletedAt *int64  `json:"completedAt"`
+	IsCompleted *bool   `json:"isCompleted"`
 }
 
 // Service provides methods for interacting with a store
