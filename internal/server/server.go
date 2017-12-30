@@ -23,17 +23,21 @@ func New(sto store.Service) *server {
 
 	router := mux.NewRouter()
 
-	router.Handle("/todo", handlers.MethodHandler{
-		"GET":  http.HandlerFunc(s.getTodos),
-		"POST": http.HandlerFunc(s.createTodo),
-	})
+	router.Handle("/todo", allowedMethods(
+		[]string{"OPTIONS", "GET", "POST"},
+		handlers.MethodHandler{
+			"GET":  http.HandlerFunc(s.getTodos),
+			"POST": http.HandlerFunc(s.createTodo),
+		}))
 
-	router.Handle("/todo/{id}", handlers.MethodHandler{
-		"GET":    http.HandlerFunc(s.getTodo),
-		"PUT":    http.HandlerFunc(s.putTodo),
-		"PATCH":  http.HandlerFunc(s.patchTodo),
-		"DELETE": http.HandlerFunc(s.deleteTodo),
-	})
+	router.Handle("/todo/{id}", allowedMethods(
+		[]string{"OPTIONS", "GET", "PUT", "PATCH", "DELETE"},
+		handlers.MethodHandler{
+			"GET":    http.HandlerFunc(s.getTodo),
+			"PUT":    http.HandlerFunc(s.putTodo),
+			"PATCH":  http.HandlerFunc(s.patchTodo),
+			"DELETE": http.HandlerFunc(s.deleteTodo),
+		}))
 
 	s.handler = limitBody(defaultHeaders(router))
 
@@ -43,6 +47,24 @@ func New(sto store.Service) *server {
 // Run starts the server listening on what address is specified
 func (s *server) Run(addr string) error {
 	return http.ListenAndServe(addr, s.handler)
+}
+
+func commaify(ss []string) (out string) {
+	for i, s := range ss {
+		out += s
+		if i != len(ss)-1 {
+			out += ","
+		}
+	}
+	return
+}
+
+func allowedMethods(methods []string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Methods", commaify(methods))
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *server) createTodo(w http.ResponseWriter, r *http.Request) {
