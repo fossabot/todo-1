@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/fharding1/todo/internal/respond"
 	"github.com/fharding1/todo/internal/store"
@@ -48,19 +49,9 @@ func (s *server) Run(addr string) error {
 	return http.ListenAndServe(addr, s.handler)
 }
 
-func commaify(ss []string) (out string) {
-	for i, s := range ss {
-		out += s
-		if i != len(ss)-1 {
-			out += ","
-		}
-	}
-	return
-}
-
 func allowedMethods(methods []string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Methods", commaify(methods))
+		w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
 
 		next.ServeHTTP(w, r)
 	})
