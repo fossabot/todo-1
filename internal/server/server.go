@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -30,14 +31,14 @@ func New(sto store.Service) *server {
 			"POST": http.HandlerFunc(s.createTodo),
 		}))
 
-	router.Handle("/todo/{id}", allowedMethods(
+	router.Handle("/todo/{id}", idMiddleware(allowedMethods(
 		[]string{"OPTIONS", "GET", "PUT", "PATCH", "DELETE"},
 		handlers.MethodHandler{
 			"GET":    http.HandlerFunc(s.getTodo),
 			"PUT":    http.HandlerFunc(s.putTodo),
 			"PATCH":  http.HandlerFunc(s.patchTodo),
 			"DELETE": http.HandlerFunc(s.deleteTodo),
-		}))
+		})))
 
 	s.handler = limitBody(defaultHeaders(router))
 
@@ -74,15 +75,7 @@ func (s *server) createTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getTodo(w http.ResponseWriter, r *http.Request) {
-	rawID := mux.Vars(r)["id"]
-
-	id, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	todo, err := s.sto.GetTodo(id)
+	todo, err := s.sto.GetTodo(r.Context().Value(keyIDCtx).(int64))
 	if err != nil {
 		if err == store.ErrNoResults {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -110,21 +103,13 @@ func (s *server) getTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
-	rawID := mux.Vars(r)["id"]
-
-	id, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
 	var todo store.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
-	todo.ID = id
+	todo.ID = r.Context().Value(keyIDCtx).(int64)
 
 	if err := s.sto.UpdateTodo(todo); err != nil {
 		respond.JSON(w, err)
@@ -133,20 +118,13 @@ func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) patchTodo(w http.ResponseWriter, r *http.Request) {
-	rawID := mux.Vars(r)["id"]
-
-	id, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
 	var todo store.NullableTodo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
+	id := r.Context().Value(keyIDCtx).(int64)
 	todo.ID = &id
 
 	if err := s.sto.PatchTodo(todo); err != nil {
@@ -156,18 +134,31 @@ func (s *server) patchTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) deleteTodo(w http.ResponseWriter, r *http.Request) {
-	rawID := mux.Vars(r)["id"]
-
-	id, err := strconv.ParseInt(rawID, 10, 64)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		return
-	}
-
-	if err := s.sto.DeleteTodo(id); err != nil {
+	if err := s.sto.DeleteTodo(r.Context().Value(keyIDCtx).(int64)); err != nil {
 		respond.JSON(w, err)
 		return
 	}
+}
+
+type key int
+
+const (
+	keyIDCtx key = iota
+)
+
+func idMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rawID := mux.Vars(r)["id"]
+
+		id, err := strconv.ParseInt(rawID, 10, 64)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), keyIDCtx, id)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 func defaultHeaders(next http.Handler) http.Handler {
