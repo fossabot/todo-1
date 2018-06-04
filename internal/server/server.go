@@ -9,7 +9,6 @@ import (
 
 	"github.com/fharding1/todo/internal/respond"
 	"github.com/fharding1/todo/internal/store"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -24,21 +23,14 @@ func New(sto store.Service) *server {
 
 	router := mux.NewRouter()
 
-	router.Handle("/todo", allowedMethods(
-		[]string{"OPTIONS", "GET", "POST"},
-		handlers.MethodHandler{
-			"GET":  http.HandlerFunc(s.getTodos),
-			"POST": http.HandlerFunc(s.createTodo),
-		}))
+	router.HandleFunc("/todo", s.getTodos).Methods("GET")
+	router.HandleFunc("/todo", s.createTodo).Methods("POST")
 
-	router.Handle("/todo/{id}", idMiddleware(allowedMethods(
-		[]string{"OPTIONS", "GET", "PUT", "PATCH", "DELETE"},
-		handlers.MethodHandler{
-			"GET":    http.HandlerFunc(s.getTodo),
-			"PUT":    http.HandlerFunc(s.putTodo),
-			"PATCH":  http.HandlerFunc(s.patchTodo),
-			"DELETE": http.HandlerFunc(s.deleteTodo),
-		})))
+	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.putTodo))).Methods("PUT")
+	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.patchTodo))).Methods("PATCH")
+	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.deleteTodo))).Methods("DELETE")
+
+	router.Use(mux.CORSMethodMiddleware(router))
 
 	s.handler = limitBody(defaultHeaders(router))
 
