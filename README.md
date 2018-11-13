@@ -20,7 +20,7 @@ A clean todo web backend written in Go.
 
 ### Configure
 
-    export TODO_POSTGRES_DSN="sslmode=disable user=postgres dbname=todos"
+    export TODO_POSTGRES_DSN="sslmode=disable user=user dbname=dbname"
     export TODO_ADDR=":8080"
 
 ### Run
