@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Server holds dependencies for the todo server such as the store.
 type Server struct {
 	sto     store.Service
 	handler http.Handler
