@@ -146,6 +146,7 @@ func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	todo.ID = r.Context().Value(keyIDCtx).(int64)
 	if err := s.sto.UpdateTodo(todo); err != nil {
 		if err, ok := err.(store.ErrNotFound); ok {
 			respond.JSON(w, nil, err, http.StatusNotFound)
