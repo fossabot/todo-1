@@ -3,28 +3,13 @@ package main
 import (
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/fharding1/todo/internal/server"
-	"github.com/fharding1/todo/internal/store/postgres"
+	"github.com/fharding1/todo/internal/store"
 )
 
 func main() {
-	portString := os.Getenv("POSTGRES_PORT")
-	port, err := strconv.Atoi(portString)
-	if err != nil {
-		log.Fatalf("invalid port: %s\n", portString)
-	}
-
-	sto, err := postgres.New(postgres.Options{
-		User:    os.Getenv("POSTGRES_USER"),
-		Pass:    os.Getenv("POSTGRES_PASS"),
-		Host:    os.Getenv("POSTGRES_HOST"),
-		Port:    port,
-		DBName:  os.Getenv("POSTGRES_DB_NAME"),
-		SSLMode: os.Getenv("POSTGRES_SSL_MODE"),
-	})
-
+	sto, err := store.NewPostgres(os.Getenv("TODO_POSTGRES_DSN"))
 	if err != nil {
 		log.Fatalf("connecting to postgres database: %v\n", err)
 	}

@@ -5,46 +5,19 @@ import (
 	"net/http"
 )
 
-// Error returns a structured error for API responses
-func Error(err error) interface{} {
-	response := struct {
-		Error struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}{}
-
-	response.Error.Message = err.Error()
-
-	return response
-}
-
-// JSON responds with the first non-nil payload, formats error messages
-func JSON(w http.ResponseWriter, responses ...interface{}) {
-	respond := func(payload interface{}) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(payload); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+// JSON writes the status code, the error if it's not null, and otherwise the
+// data.
+func JSON(w http.ResponseWriter, data interface{}, err error, code int) {
+	var payload interface{}
+	if err != nil {
+		payload = map[string]string{"error": err.Error()}
+	} else {
+		payload = data
 	}
 
-	for _, response := range responses {
-		switch value := response.(type) {
-		case nil:
-			continue
-		case func() error:
-			err := value()
-			if err == nil {
-				continue
-			}
-			respond(Error(err))
-		case error:
-			respond(Error(value))
-		default:
-			respond(struct {
-				Response interface{} `json:"response"`
-			}{response})
-		}
-		// Exit on the first output...
-		break
+	w.WriteHeader(code)
+
+	if payload != nil {
+		json.NewEncoder(w).Encode(payload)
 	}
 }

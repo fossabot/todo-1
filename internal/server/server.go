@@ -5,32 +5,30 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"strings"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/fharding1/todo/internal/respond"
 	"github.com/fharding1/todo/internal/store"
 	"github.com/gorilla/mux"
 )
 
-type server struct {
+type Server struct {
 	sto     store.Service
 	handler http.Handler
 }
 
 // New creates a new server from a store and populates the handler
-func New(sto store.Service) *server {
-	s := &server{sto: sto}
+func New(sto store.Service) *Server {
+	s := &Server{sto: sto}
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/todo", s.getTodos).Methods("GET")
-	router.HandleFunc("/todo", s.createTodo).Methods("POST")
-
-	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.putTodo))).Methods("PUT")
-	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.patchTodo))).Methods("PATCH")
-	router.Handle("/todo/{id}", idMiddleware(http.HandlerFunc(s.deleteTodo))).Methods("DELETE")
-
-	router.Use(mux.CORSMethodMiddleware(router))
+	router.HandleFunc("/todos", s.getTodos).Methods("GET")
+	router.HandleFunc("/todos", s.createTodo).Methods("POST")
+	router.Handle("/todos/{id}", idMiddleware(http.HandlerFunc(s.getTodo))).Methods("GET")
+	router.Handle("/todos/{id}", idMiddleware(http.HandlerFunc(s.putTodo))).Methods("PUT")
+	router.Handle("/todos/{id}", idMiddleware(http.HandlerFunc(s.patchTodo))).Methods("PATCH")
+	router.Handle("/todos/{id}", idMiddleware(http.HandlerFunc(s.deleteTodo))).Methods("DELETE")
 
 	s.handler = limitBody(defaultHeaders(router))
 
@@ -38,98 +36,140 @@ func New(sto store.Service) *server {
 }
 
 // Run starts the server listening on what address is specified
-func (s *server) Run(addr string) error {
+func (s *Server) Run(addr string) error {
 	return http.ListenAndServe(addr, s.handler)
 }
 
-func allowedMethods(methods []string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Methods", strings.Join(methods, ","))
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *server) createTodo(w http.ResponseWriter, r *http.Request) {
+func (s *Server) createTodo(w http.ResponseWriter, r *http.Request) {
 	var todo store.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		respond.JSON(w, nil, err, http.StatusUnprocessableEntity)
 		return
 	}
 
-	id, err := s.sto.CreateTodo(todo)
+	err := s.sto.CreateTodo(&todo)
 	if err != nil {
-		respond.JSON(w, err)
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
 		return
 	}
 
-	respond.JSON(w, map[string]int64{"id": id})
+	respond.JSON(w, todo, nil, http.StatusCreated)
 }
 
-func (s *server) getTodo(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getTodo(w http.ResponseWriter, r *http.Request) {
 	todo, err := s.sto.GetTodo(r.Context().Value(keyIDCtx).(int64))
 	if err != nil {
 		if err == store.ErrNoResults {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		} else {
-			respond.JSON(w, err)
+			respond.JSON(w, nil, err, http.StatusNotFound)
+			return
 		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
 		return
 	}
 
-	respond.JSON(w, todo)
+	respond.JSON(w, todo, nil, http.StatusOK)
 }
 
-func (s *server) getTodos(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getTodos(w http.ResponseWriter, r *http.Request) {
 	todos, err := s.sto.GetTodos()
 	if err != nil {
-		if err == store.ErrNoResults {
-			todos = []store.Todo{}
-		} else {
-			respond.JSON(w, err)
-			return
-		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
 	}
 
-	respond.JSON(w, todos)
+	if todos == nil {
+		todos = make([]store.Todo, 0)
+	}
+
+	respond.JSON(w, todos, nil, http.StatusOK)
 }
 
-func (s *server) putTodo(w http.ResponseWriter, r *http.Request) {
+func (s *Server) putTodo(w http.ResponseWriter, r *http.Request) {
 	var todo store.Todo
 	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		respond.JSON(w, nil, err, http.StatusUnprocessableEntity)
 		return
 	}
 
 	todo.ID = r.Context().Value(keyIDCtx).(int64)
 
 	if err := s.sto.UpdateTodo(todo); err != nil {
-		respond.JSON(w, err)
+		if err, ok := err.(store.ErrNotFound); ok {
+			respond.JSON(w, nil, err, http.StatusNotFound)
+			return
+		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *server) patchTodo(w http.ResponseWriter, r *http.Request) {
-	var todo store.NullableTodo
-	if err := json.NewDecoder(r.Body).Decode(&todo); err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+const jsonPatchContentType = "application/json-patch+json"
+
+func (s *Server) patchTodo(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != jsonPatchContentType {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
 	}
 
-	id := r.Context().Value(keyIDCtx).(int64)
-	todo.ID = &id
-
-	if err := s.sto.PatchTodo(todo); err != nil {
-		respond.JSON(w, err)
+	var patch jsonpatch.Patch
+	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+		respond.JSON(w, nil, err, http.StatusUnprocessableEntity)
 		return
 	}
+
+	todo, err := s.sto.GetTodo(r.Context().Value(keyIDCtx).(int64))
+	if err != nil {
+		if err, ok := err.(store.ErrNotFound); ok {
+			respond.JSON(w, nil, err, http.StatusNotFound)
+			return
+		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
+	}
+
+	originalDocument, err := json.Marshal(todo)
+	if err != nil {
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
+	}
+
+	modifiedDocument, err := patch.Apply(originalDocument)
+	if err != nil {
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.Unmarshal(modifiedDocument, &todo); err != nil {
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.sto.UpdateTodo(todo); err != nil {
+		if err, ok := err.(store.ErrNotFound); ok {
+			respond.JSON(w, nil, err, http.StatusNotFound)
+			return
+		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *server) deleteTodo(w http.ResponseWriter, r *http.Request) {
-	if err := s.sto.DeleteTodo(r.Context().Value(keyIDCtx).(int64)); err != nil {
-		respond.JSON(w, err)
+func (s *Server) deleteTodo(w http.ResponseWriter, r *http.Request) {
+	err := s.sto.DeleteTodo(r.Context().Value(keyIDCtx).(int64))
+	if err != nil {
+		if err, ok := err.(store.ErrNotFound); ok {
+			respond.JSON(w, nil, err, http.StatusNotFound)
+			return
+		}
+		respond.JSON(w, nil, err, http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type key int
