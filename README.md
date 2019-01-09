@@ -1,4 +1,6 @@
 # Todo
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Ffharding1%2Ftodo.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Ffharding1%2Ftodo?ref=badge_shield)
+
 
 A clean todo web backend written in Go.
 
@@ -26,3 +28,7 @@ A clean todo web backend written in Go.
 ### Run
 
     ./todo
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Ffharding1%2Ftodo.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Ffharding1%2Ftodo?ref=badge_large)
